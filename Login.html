@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Repetição Máxima</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Poppins:wght@400;600&display=swap');
+
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      height: 100vh;
+      background: linear-gradient(135deg, #2b0075, #b58000);
+      background-size: 200% 200%;
+      animation: gradientShift 6s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .login-container {
+      position: relative;
+      background: rgba(15, 15, 15, 0.7);
+      border: 3px solid;
+      border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1;
+      border-radius: 20px;
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+      backdrop-filter: blur(10px);
+      width: 360px;
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes borderPulse {
+      0% {
+        border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1;
+      }
+      50% {
+        border-image: linear-gradient(90deg, #ffd700, #7a00ff) 1;
+      }
+      100% {
+        border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1;
+      }
+    }
+
+    .login-container {
+      animation: fadeIn 0.8s ease-in-out, borderPulse 5s linear infinite;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: #ff9900;
+      padding: 8px;
+      box-shadow: 0 0 25px rgba(255, 153, 0, 0.4);
+      margin-bottom: 10px;
+      border: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    h1 {
+      font-family: 'Russo One', sans-serif;
+      font-size: 1.8rem;
+      color: #7a00ff;
+      margin-bottom: 5px;
+      text-shadow: 0 0 10px rgba(122, 0, 255, 0.4);
+    }
+
+    .slogan {
+      font-size: 0.9rem;
+      color: #ffd700;
+      margin-bottom: 25px;
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+
+    .form-fields {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .form-fields input,
+    .form-fields button {
+      width: 85%;
+      max-width: 300px;
+    }
+
+    input {
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      border: 1px solid #ffd700;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+
+    input:hover {
+      box-shadow: 0 0 10px rgba(122, 0, 255, 0.3);
+    }
+
+    button {
+      padding: 12px;
+      background: linear-gradient(90deg, #ffd700, #b58000);
+      border: none;
+      border-radius: 10px;
+      color: #000;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: 0.3s;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #b58000, #ffd700);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .msg {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      min-height: 20px;
+    }
+
+    .msg.error { color: #ff5555; }
+    .msg.success { color: #00ff88; }
+
+    .light-glow {
+      position: absolute;
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(255,215,0,0.3), transparent 70%);
+      filter: blur(40px);
+      z-index: -1;
+      animation: glow 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { opacity: 0.6; transform: translateX(-50%) scale(1); }
+      to { opacity: 1; transform: translateX(-50%) scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="light-glow"></div>
+    <img src="3cd663a4-caaa-4484-b624-010df4e4c2e2.jpg" alt="Logo Repetição Máxima" class="logo">
+    <h1>Repetição Máxima</h1>
+    <div class="slogan">Gerenciador de Estoque</div>
+
+    <div class="form-fields">
+      <input type="email" id="email" placeholder="E-mail" />
+      <input type="password" id="senha" placeholder="Senha" />
+      <button onclick="login()">Entrar</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://cdtouwfxwuhnlzqhcagy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdG91d2Z4d3Vobmx6cWhjYWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MTQ4NjEsImV4cCI6MjA3NjI5MDg2MX0.C6XChNw-M2Xi7kKA1yFEyxAUOk_5t2CecQ1r40BjEYc";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      const msg = document.getElementById("msg");
+      msg.className = "msg";
+
+      if (!email || !senha) {
+        msg.innerText = "Preencha todos os campos!";
+        msg.classList.add("error");
+        return;
+      }
+
+      msg.innerText = "Verificando...";
+      const { data: usuario } = await supabase.from("usuarios").select("email").eq("email", email).maybeSingle();
+
+      if (!usuario) {
+        msg.innerText = "❌ Usuário não autorizado.";
+        msg.classList.add("error");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      if (error) {
+        msg.innerText = "❌ " + error.message;
+        msg.classList.add("error");
+      } else {
+        msg.innerText = "✅ Bem-vindo!";
+        msg.classList.add("success");
+        setTimeout(() => window.location.href = "index.html", 1000);
+      }
+    }
+  </script>
+</body>
+</html>

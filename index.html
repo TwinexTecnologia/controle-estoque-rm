@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Estoque - Repetição Máxima</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Russo+One&display=swap" rel="stylesheet">
+  <style>
+    /* ===== VISUAL ROXO + DOURADO ===== */
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #1a0033, #3a0075, #b58000);
+      background-size: 300% 300%;
+      animation: gradientShift 6s ease-in-out infinite;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1 {
+      margin-top: 20px;
+      color: #ffd700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Russo One', sans-serif;
+      text-shadow: 0 0 15px rgba(255,215,0,0.6);
+    }
+
+    .container {
+      margin-top: 20px;
+      background: rgba(20, 20, 20, 0.85);
+      padding: 20px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      border: 2px solid;
+      border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1;
+      box-shadow: 0 0 24px rgba(255,215,0,0.18);
+      backdrop-filter: blur(8px);
+      animation: borderPulse 5s linear infinite;
+    }
+    @keyframes borderPulse {
+      0% { border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1; }
+      50% { border-image: linear-gradient(90deg, #ffd700, #7a00ff) 1; }
+      100% { border-image: linear-gradient(90deg, #7a00ff, #ffd700) 1; }
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .buttons button {
+      background: linear-gradient(90deg, #ffd700, #b58000);
+      color: #000;
+      font-weight: bold;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 16px rgba(255,215,0,0.25);
+    }
+    .buttons button:hover {
+      background: linear-gradient(90deg, #b58000, #ffd700);
+      box-shadow: 0 0 28px rgba(255,215,0,0.55);
+      transform: translateY(-2px);
+    }
+
+    form {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(15, 15, 15, 0.92);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 10px;
+      border: 1px solid rgba(122,0,255,0.35);
+      box-shadow: 0 0 14px rgba(122,0,255,0.25);
+    }
+
+    input, select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,215,0,0.35);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: 0.25s;
+    }
+    input:focus, select:focus {
+      border: 1px solid #ffd700;
+      box-shadow: 0 0 10px rgba(255,215,0,0.35);
+    }
+
+    /* Dropdown escuro e legível */
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: rgba(40, 40, 40, 0.9);
+      color: #fff;
+      border: 1px solid rgba(255,215,0,0.35);
+      padding-right: 30px;
+      position: relative;
+    }
+    select option {
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    option:checked, option:hover {
+      background-color: #3a0075;
+      color: #ffd700;
+    }
+
+    button.salvar {
+      background: linear-gradient(90deg, #ffd700, #b58000);
+      border: none;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 10px;
+      transition: 0.25s;
+      box-shadow: 0 0 16px rgba(255,215,0,0.25);
+    }
+    button.salvar:hover {
+      background: linear-gradient(90deg, #b58000, #ffd700);
+      box-shadow: 0 0 24px rgba(255,215,0,0.55);
+      transform: translateY(-1px);
+    }
+
+    .loading { display: none; color: #ffd700; font-weight: bold; }
+    .status { margin-top: 8px; font-weight: bold; }
+    .success { color: #00ff88; }
+    .error { color: #ff4d4d; }
+
+    .estoque-item, .venda-item {
+      background: rgba(31,31,31,0.95);
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      box-shadow: 0 0 12px rgba(122,0,255,0.28);
+      border: 1px solid rgba(255,215,0,0.12);
+    }
+    .estoque-item img, .venda-item img {
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 2px solid rgba(255,215,0,0.22);
+      box-shadow: 0 0 10px rgba(122,0,255,0.3);
+    }
+
+    a { color: #ffd700; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+
+    h3 {
+      color: #b58000;
+      font-family: 'Russo One', sans-serif;
+      text-shadow: 0 0 10px rgba(255,215,0,0.35);
+      margin-top: 0;
+    }
+    /* ===== FIM DO VISUAL ===== */
+  </style>
+</head>
+<body>
+  <h1>🧾 Controle de Estoque</h1>
+
+  <div class="container">
+    <div class="buttons">
+      <button onclick="mostrarFormulario('cadastrar')">+ Cadastrar Camiseta</button>
+      <button onclick="mostrarFormulario('ver')">👕 Ver Estoque</button>
+      <button onclick="mostrarFormulario('aumentar')">📈 Aumentar Estoque</button>
+      <button onclick="mostrarFormulario('ajustar')">📉 Ajustar Estoque</button>
+      <button onclick="mostrarFormulario('vender')">💸 Registrar Venda</button>
+      <button onclick="mostrarFormulario('historico')">📜 Histórico de Vendas</button>
+    </div>
+
+    <!-- Formulário de cadastro -->
+    <form id="formCadastrar">
+      <h3>Nova Camiseta</h3>
+      <label>Tipo *</label>
+      <select id="tipo" required>
+        <option value="">Selecione o tipo</option>
+        <option value="Camiseta Oversized">Camiseta Oversized</option>
+        <option value="Camiseta Long">Camiseta Long</option>
+      </select>
+
+      <label>Cor da Camiseta *</label>
+      <input id="cor_camiseta" type="text" placeholder="Ex: Preta, Branca..." required>
+
+      <label>Cor da Estampa *</label>
+      <input id="cor_estampa" type="text" placeholder="Ex: Vermelha, Dourada..." required>
+
+      <label>Descrição / Estampa *</label>
+      <input id="descricao" type="text" placeholder="Ex: Tigre, Dragão..." required>
+
+      <label>Tamanho *</label>
+      <select id="tamanho" required>
+        <option value="">Selecione o tamanho</option>
+        <option value="PP">PP</option><option value="P">P</option><option value="M">M</option>
+        <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+        <option value="XXG">XXG</option><option value="XXXG">XXXG</option>
+      </select>
+
+      <label>Quantidade *</label>
+      <input id="quantidade" type="number" placeholder="Ex: 10" required>
+
+      <label>Preço *</label>
+      <input id="preco" type="number" placeholder="Ex: 79.90" required>
+
+      <label>Imagem *</label>
+      <input id="imagem" type="file" accept="image/*" required>
+
+      <button class="salvar" type="button" onclick="cadastrarCamiseta()">Salvar</button>
+      <div class="loading" id="loadingCadastrar">⏳ Salvando...</div>
+      <div class="status" id="statusCadastrar"></div>
+    </form>
+
+    <!-- Formulário de aumentar estoque -->
+    <form id="formAumentar">
+      <h3>📈 Aumentar Estoque</h3>
+      <div id="selectsAumentar"></div>
+      <label>Quantidade a adicionar *</label>
+      <input id="quantidade_add" type="number" placeholder="Ex: 5" required>
+      <button class="salvar" type="button" onclick="alterarEstoque('aumentar')">Salvar</button>
+      <div class="loading" id="loadingAdd">⏳ Atualizando...</div>
+      <div class="status" id="statusAdd"></div>
+    </form>
+
+    <!-- Formulário de ajustar estoque -->
+    <form id="formAjustar">
+      <h3>📉 Ajustar Estoque</h3>
+      <div id="selectsAjustar"></div>
+      <label>Quantidade a reduzir *</label>
+      <input id="quantidade_sub" type="number" placeholder="Ex: 3" required>
+      <button class="salvar" type="button" onclick="alterarEstoque('ajustar')">Salvar</button>
+      <div class="loading" id="loadingSub">⏳ Atualizando...</div>
+      <div class="status" id="statusSub"></div>
+    </form>
+
+    <!-- Formulário de venda -->
+    <form id="formVender">
+      <h3>💸 Registrar Venda</h3>
+      <div id="selectsVender"></div>
+      <label>Quantidade vendida *</label>
+      <input id="quantidade_venda" type="number" placeholder="Ex: 2" required>
+      <label>Valor total (R$) *</label>
+      <input id="valor_venda" type="number" placeholder="Ex: 159.80" required>
+      <label>Cliente *</label>
+      <input id="cliente" type="text" placeholder="Nome do cliente" required>
+      <label>Vendedor *</label>
+      <input id="vendedor" type="text" placeholder="Nome do vendedor" required>
+      <label>CPF *</label>
+      <input id="cpf" type="text" placeholder="000.000.000-00" required>
+      <label>Comprovante *</label>
+      <input id="comprovante" type="file" accept="image/*,.pdf" required>
+      <button class="salvar" type="button" onclick="registrarVenda()">Salvar Venda</button>
+      <div class="loading" id="loadingVenda">⏳ Salvando...</div>
+      <div class="status" id="statusVenda"></div>
+    </form>
+
+    <!-- Tela de estoque -->
+    <div id="telaEstoque" style="display:none;">
+      <h3>Estoque Atual</h3>
+      <div id="listaEstoque"></div>
+    </div>
+
+    <!-- Histórico de vendas -->
+    <div id="telaHistorico" style="display:none;">
+      <h3>📜 Histórico de Vendas</h3>
+      <div id="listaVendas"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://cdtouwfxwuhnlzqhcagy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdG91d2Z4d3Vobmx6cWhjYWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MTQ4NjEsImV4cCI6MjA3NjI5MDg2MX0.C6XChNw-M2Xi7kKA1yFEyxAUOk_5t2CecQ1r40BjEYc";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /* ============ LOGS ============ */
+    async function getUsuarioAtual() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        return data?.user?.email || "Desconhecido";
+      } catch {
+        return "Desconhecido";
+      }
+    }
+
+    async function registrarLog(usuario, acao, detalhes = "") {
+      try {
+        await supabase.from("logs_usuarios").insert([{ usuario, acao, detalhes }]);
+        console.log("🪵 Log:", usuario, acao, detalhes);
+      } catch (err) {
+        console.error("Erro ao registrar log:", err);
+      }
+    }
+    /* ========== FIM LOGS ========== */
+
+    function mostrarFormulario(tipo) {
+      document.querySelectorAll("form").forEach(f => f.style.display = "none");
+      document.getElementById("telaEstoque").style.display = "none";
+      document.getElementById("telaHistorico").style.display = "none";
+
+      if (tipo === "cadastrar") document.getElementById("formCadastrar").style.display = "flex";
+      if (tipo === "ver") { document.getElementById("telaEstoque").style.display = "block"; carregarEstoque(); }
+      if (tipo === "aumentar") { document.getElementById("formAumentar").style.display = "flex"; carregarSelects("selectsAumentar"); }
+      if (tipo === "ajustar") { document.getElementById("formAjustar").style.display = "flex"; carregarSelects("selectsAjustar"); }
+      if (tipo === "vender") { document.getElementById("formVender").style.display = "flex"; carregarSelects("selectsVender"); }
+      if (tipo === "historico") { document.getElementById("telaHistorico").style.display = "block"; carregarHistorico(); }
+    }
+
+    async function carregarSelects(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = `
+        <label>Modelo *</label><select id="${containerId}_modelo" onchange="carregarCores('${containerId}')" required><option>Carregando...</option></select>
+        <label>Cor *</label><select id="${containerId}_cor" onchange="carregarCoresEstampa('${containerId}')" required><option>Selecione o modelo</option></select>
+        <label>Cor da Estampa *</label><select id="${containerId}_estampa" onchange="carregarDescricoes('${containerId}')" required><option>Selecione a cor</option></select>
+        <label>Descrição *</label><select id="${containerId}_descricao" required><option>Selecione a estampa</option></select>
+      `;
+      const { data } = await supabase.from("camisetas").select("modelo");
+      const modelos = [...new Set((data || []).map(i => i.modelo))];
+      document.getElementById(`${containerId}_modelo`).innerHTML =
+        '<option value="">Selecione</option>' + modelos.map(m => `<option>${m}</option>`).join("");
+    }
+
+    async function carregarCores(id) {
+      const modelo = document.getElementById(`${id}_modelo`).value;
+      const { data } = await supabase.from("camisetas").select("cor").eq("modelo", modelo);
+      const cores = [...new Set((data || []).map(i => i.cor))];
+      document.getElementById(`${id}_cor`).innerHTML =
+        '<option value="">Selecione</option>' + cores.map(c => `<option>${c}</option>`).join("");
+    }
+
+    async function carregarCoresEstampa(id) {
+      const modelo = document.getElementById(`${id}_modelo`).value;
+      const cor = document.getElementById(`${id}_cor`).value;
+      const { data } = await supabase.from("camisetas").select("cor_estampa").eq("modelo", modelo).eq("cor", cor);
+      const estampas = [...new Set((data || []).map(i => i.cor_estampa))];
+      document.getElementById(`${id}_estampa`).innerHTML =
+        '<option value="">Selecione</option>' + estampas.map(e => `<option>${e}</option>`).join("");
+    }
+
+    async function carregarDescricoes(id) {
+      const modelo = document.getElementById(`${id}_modelo`).value;
+      const cor = document.getElementById(`${id}_cor`).value;
+      const estampa = document.getElementById(`${id}_estampa`).value;
+      const { data } = await supabase.from("camisetas").select("descricao")
+        .eq("modelo", modelo).eq("cor", cor).eq("cor_estampa", estampa);
+      const desc = [...new Set((data || []).map(i => i.descricao))];
+      document.getElementById(`${id}_descricao`).innerHTML =
+        '<option value="">Selecione</option>' + desc.map(d => `<option>${d}</option>`).join("");
+    }
+
+    /* ======= CADASTRAR CAMISETA ======= */
+    async function cadastrarCamiseta() {
+      const tipo = document.getElementById("tipo").value;
+      const cor = document.getElementById("cor_camiseta").value.trim();
+      const cor_estampa = document.getElementById("cor_estampa").value.trim();
+      const descricao = document.getElementById("descricao").value.trim();
+      const tamanho = document.getElementById("tamanho").value;
+      const quantidade = parseInt(document.getElementById("quantidade").value);
+      const preco = parseFloat(document.getElementById("preco").value);
+      const imagem = document.getElementById("imagem").files[0];
+      const loading = document.getElementById("loadingCadastrar");
+      const status = document.getElementById("statusCadastrar");
+
+      if (!tipo || !cor || !cor_estampa || !descricao || !tamanho || !quantidade || !preco || !imagem) {
+        alert("Preencha todos os campos obrigatórios!");
+        return;
+      }
+
+      loading.style.display = "block"; status.innerText = "";
+
+      // upload da imagem
+      const caminho = `camisetas/${Date.now()}_${imagem.name}`;
+      const { data: up, error: upErr } = await supabase.storage.from("Imagens").upload(caminho, imagem);
+      if (upErr || !up) {
+        loading.style.display = "none";
+        status.innerText = "❌ Erro no upload da imagem.";
+        status.className = "status error";
+        return;
+      }
+      const { data: pub } = supabase.storage.from("Imagens").getPublicUrl(up.path);
+      const imagem_url = pub.publicUrl;
+
+      // insert da camiseta
+      const { error: insertErr } = await supabase.from("camisetas").insert([{
+        modelo: tipo,
+        cor,
+        cor_estampa,
+        descricao,
+        tamanho,
+        quantidade,
+        preco,
+        imagem_url
+      }]);
+
+      if (insertErr) {
+        loading.style.display = "none";
+        status.innerText = "❌ Erro ao salvar camiseta.";
+        status.className = "status error";
+        return;
+      }
+
+      // log
+      const usuario = await getUsuarioAtual();
+      await registrarLog(usuario, "Cadastro de Camiseta",
+        `Modelo: ${tipo} | Cor: ${cor} | Estampa: ${cor_estampa} | Desc: ${descricao} | Tam: ${tamanho} | Qtd: ${quantidade} | Preço: R$${preco}`);
+
+      loading.style.display = "none";
+      status.innerText = "✅ Camiseta cadastrada com sucesso!";
+      status.className = "status success";
+    }
+    /* ====== FIM CADASTRO ====== */
+
+    /* ======= VENDER ======= */
+    async function registrarVenda() {
+      const modelo = document.getElementById("selectsVender_modelo").value;
+      const cor = document.getElementById("selectsVender_cor").value;
+      const estampa = document.getElementById("selectsVender_estampa").value;
+      const descricao = document.getElementById("selectsVender_descricao").value;
+      const qtdVenda = parseInt(document.getElementById("quantidade_venda").value);
+      const valor = parseFloat(document.getElementById("valor_venda").value);
+      const cliente = document.getElementById("cliente").value.trim();
+      const vendedor = document.getElementById("vendedor").value.trim();
+      const cpf = document.getElementById("cpf").value.trim();
+      const comprovante = document.getElementById("comprovante").files[0];
+      const loading = document.getElementById("loadingVenda");
+      const status = document.getElementById("statusVenda");
+
+      if (!modelo || !cor || !estampa || !descricao || !qtdVenda || !valor || !cliente || !cpf || !comprovante || !vendedor) {
+        alert("Preencha todos os campos obrigatórios!");
+        return;
+      }
+
+      loading.style.display = "block"; status.innerText = "";
+
+      // upload do comprovante
+      const { data: up } = await supabase.storage.from("Imagens").upload(`comprovantes/${Date.now()}_${comprovante.name}`, comprovante);
+      if (!up) { loading.style.display = "none"; status.innerText = "❌ Erro no upload do comprovante."; status.className = "status error"; return; }
+      const { data: publicUrl } = supabase.storage.from("Imagens").getPublicUrl(up.path);
+      const urlComprovante = publicUrl.publicUrl;
+
+      // insert da venda
+      const { error: insertErr } = await supabase.from("vendas").insert([{
+        modelo, cor, cor_estampa: estampa, descricao,
+        quantidade: qtdVenda, valor_total: valor,
+        cliente, cpf, vendedor,
+        comprovante_url: urlComprovante
+      }]);
+      if (insertErr) { loading.style.display = "none"; status.innerText = "❌ Erro ao salvar venda."; status.className = "status error"; return; }
+
+      // baixa do estoque
+      const { data } = await supabase.from("camisetas").select("*")
+        .eq("modelo", modelo).eq("cor", cor).eq("cor_estampa", estampa).eq("descricao", descricao);
+      if (data && data.length) {
+        const novaQtd = Math.max(0, (data[0].quantidade || 0) - qtdVenda);
+        await supabase.from("camisetas").update({ quantidade: novaQtd }).eq("id", data[0].id);
+      }
+
+      // log
+      const usuario = await getUsuarioAtual();
+      await registrarLog(usuario || vendedor, "Venda registrada",
+        `Vendedor: ${vendedor} | Cliente: ${cliente} | ${modelo} - ${cor}/${estampa} (${descricao}) | Qtd: ${qtdVenda} | Valor: R$${valor}`);
+
+      loading.style.display = "none";
+      status.innerText = "✅ Venda registrada e estoque atualizado!";
+      status.className = "status success";
+    }
+    /* ====== FIM VENDA ====== */
+
+    /* ======= AUMENTAR / AJUSTAR ESTOQUE ======= */
+    async function alterarEstoque(acao) {
+      const containerId = acao === "aumentar" ? "selectsAumentar" : "selectsAjustar";
+      const modelo = document.getElementById(`${containerId}_modelo`).value;
+      const cor = document.getElementById(`${containerId}_cor`).value;
+      const estampa = document.getElementById(`${containerId}_estampa`).value;
+      const descricao = document.getElementById(`${containerId}_descricao`).value;
+      const quantidadeCampo = acao === "aumentar" ? "quantidade_add" : "quantidade_sub";
+      const qtd = parseInt(document.getElementById(quantidadeCampo).value);
+
+      const loading = document.getElementById(acao === "aumentar" ? "loadingAdd" : "loadingSub");
+      const status = document.getElementById(acao === "aumentar" ? "statusAdd" : "statusSub");
+
+      if (!modelo || !cor || !estampa || !descricao || !qtd) {
+        alert("Preencha todos os campos obrigatórios!");
+        return;
+      }
+
+      loading.style.display = "block"; status.innerText = "";
+
+      const { data, error } = await supabase.from("camisetas").select("*")
+        .eq("modelo", modelo).eq("cor", cor).eq("cor_estampa", estampa).eq("descricao", descricao);
+
+      if (error || !data || data.length === 0) {
+        loading.style.display = "none";
+        status.innerText = "❌ Camiseta não encontrada.";
+        status.className = "status error";
+        return;
+      }
+
+      const atual = data[0].quantidade || 0;
+      const novaQtd = acao === "aumentar" ? atual + qtd : Math.max(0, atual - qtd);
+      const { error: updateError } = await supabase.from("camisetas").update({ quantidade: novaQtd }).eq("id", data[0].id);
+
+      loading.style.display = "none";
+      if (updateError) {
+        status.innerText = "❌ Erro ao atualizar estoque.";
+        status.className = "status error";
+      } else {
+        status.innerText = acao === "aumentar" ? "✅ Estoque aumentado com sucesso!" : "✅ Estoque ajustado com sucesso!";
+        status.className = "status success";
+
+        // log
+        const usuario = await getUsuarioAtual();
+        await registrarLog(usuario, acao === "aumentar" ? "Aumento de Estoque" : "Ajuste de Estoque",
+          `${modelo} - ${cor}/${estampa} (${descricao}) | ${acao === "aumentar" ? "+" : "-"}${qtd} | Novo total: ${novaQtd}`);
+      }
+    }
+    /* ====== FIM ESTOQUE ====== */
+
+    /* ======= LISTAGENS ======= */
+    async function carregarHistorico() {
+      const lista = document.getElementById("listaVendas");
+      const { data } = await supabase.from("vendas").select("*").order("id", { ascending: false });
+      lista.innerHTML = (data || []).map(v => `
+        <div class="venda-item">
+          <div>
+            <b>${v.descricao}</b> - ${v.modelo}<br>
+            Cor: ${v.cor} | Estampa: ${v.cor_estampa}<br>
+            Cliente: ${v.cliente} | <b>Vendedor:</b> ${v.vendedor || "-"}<br>
+            CPF: ${v.cpf}<br>
+            Qtd: ${v.quantidade} | Valor: R$${v.valor_total}<br>
+            <a href="${v.comprovante_url}" target="_blank">📎 Comprovante</a><br>
+            <small>
+              ${v.criado_em
+                ? new Date(new Date(v.criado_em).getTime() - 3 * 60 * 60 * 1000).toLocaleString("pt-BR")
+                : (v.created_at ? new Date(v.created_at).toLocaleString("pt-BR") : "Data não disponível")}
+            </small>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function carregarEstoque() {
+      const lista = document.getElementById("listaEstoque");
+      const { data } = await supabase.from("camisetas").select("*");
+      lista.innerHTML = (data || []).map(item => `
+        <div class="estoque-item">
+          <img src="${item.imagem_url || ""}" alt="${item.descricao}">
+          <div><b>${item.descricao}</b><br>
+          Modelo: ${item.modelo}<br>Cor: ${item.cor}<br>Estampa: ${item.cor_estampa}<br>
+          Tam: ${item.tamanho || "-"}<br>
+          Qtd: ${item.quantidade}<br>Preço: R$${item.preco}</div>
+        </div>`).join("");
+    }
+    /* ====== FIM LISTAGENS ====== */
+  </script>
+</body>
+</html>
