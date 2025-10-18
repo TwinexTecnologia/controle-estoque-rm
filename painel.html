@@ -206,10 +206,24 @@
       </select>
 
       <label>Cor da Camiseta *</label>
-      <input id="cor_camiseta" type="text" placeholder="Ex: Preta, Branca..." required>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+        <button type="button" class="opcao-cor" onclick="selecionarCor('camiseta', 'Preta')">Preta</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('camiseta', 'Branca')">Branca</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('camiseta', 'Bege')">Bege</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('camiseta', 'Vermelha')">Vermelha</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('camiseta', 'Azul')">Azul</button>
+      </div>
+      <input id="cor_camiseta" type="text" placeholder="Digite ou selecione a cor" required>
 
       <label>Cor da Estampa *</label>
-      <input id="cor_estampa" type="text" placeholder="Ex: Vermelha, Dourada..." required>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+        <button type="button" class="opcao-cor" onclick="selecionarCor('estampa', 'Dourada')">Dourada</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('estampa', 'Vermelha')">Vermelha</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('estampa', 'Branca')">Branca</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('estampa', 'Prata')">Prata</button>
+        <button type="button" class="opcao-cor" onclick="selecionarCor('estampa', 'Preta')">Preta</button>
+      </div>
+      <input id="cor_estampa" type="text" placeholder="Digite ou selecione a cor" required>
 
       <label>Descrição / Estampa *</label>
       <input id="descricao" type="text" placeholder="Ex: Tigre, Dragão..." required>
@@ -235,6 +249,16 @@
       <div class="loading" id="loadingCadastrar">⏳ Salvando...</div>
       <div class="status" id="statusCadastrar"></div>
     </form>
+  </div>
+
+  <script>
+    function selecionarCor(tipo, valor) {
+      const input = document.getElementById(tipo === 'camiseta' ? 'cor_camiseta' : 'cor_estampa');
+      input.value = valor;
+      document.querySelectorAll(`.opcao-cor`).forEach(b => b.classList.remove('ativo'));
+      event.target.classList.add('ativo');
+    }
+  </script>
 
     <!-- Formulário de aumentar estoque -->
     <form id="formAumentar">
