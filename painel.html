@@ -587,18 +587,68 @@
       `).join("");
     }
 
-    async function carregarEstoque() {
-      const lista = document.getElementById("listaEstoque");
-      const { data } = await supabase.from("camisetas").select("*");
-      lista.innerHTML = (data || []).map(item => `
-        <div class="estoque-item">
-          <img src="${item.imagem_url || ""}" alt="${item.descricao}">
-          <div><b>${item.descricao}</b><br>
-          Modelo: ${item.modelo}<br>Cor: ${item.cor}<br>Estampa: ${item.cor_estampa}<br>
-          Tam: ${item.tamanho || "-"}<br>
-          Qtd: ${item.quantidade}<br>Preço: R$${item.preco}</div>
-        </div>`).join("");
-    }
+async function carregarEstoque() {
+  const lista = document.getElementById("listaEstoque");
+  const { data } = await supabase.from("camisetas").select("*");
+  lista.innerHTML = (data || []).map(item => `
+    <div class="estoque-item">
+      <img id="img_${item.id}" src="${item.imagem_url || ""}" alt="${item.descricao}">
+      <div>
+        <b>${item.descricao}</b><br>
+        Modelo: ${item.modelo}<br>
+        Cor: ${item.cor}<br>
+        Estampa: ${item.cor_estampa}<br>
+        Tam: ${item.tamanho || "-"}<br>
+        Qtd: ${item.quantidade}<br>
+        Preço: R$${item.preco}<br><br>
+        <button onclick="alterarFoto(${item.id})" class="salvar">🖼️ Alterar Foto</button>
+        <input type="file" id="file_${item.id}" style="display:none" accept="image/*" onchange="uploadNovaFoto(${item.id})">
+      </div>
+    </div>
+  `).join("");
+}
+
+function alterarFoto(id) {
+  document.getElementById(`file_${id}`).click();
+}
+
+async function uploadNovaFoto(id) {
+  const fileInput = document.getElementById(`file_${id}`);
+  const novaImagem = fileInput.files[0];
+  if (!novaImagem) return;
+
+  const loadingMsg = document.createElement("div");
+  loadingMsg.innerText = "⏳ Enviando nova imagem...";
+  loadingMsg.style.color = "#ffd700";
+  fileInput.parentNode.appendChild(loadingMsg);
+
+  try {
+    const caminho = `camisetas/${Date.now()}_${novaImagem.name}`;
+    const { data: up, error: upErr } = await supabase.storage.from("Imagens").upload(caminho, novaImagem);
+    if (upErr || !up) throw new Error("Erro no upload.");
+
+    const { data: pub } = supabase.storage.from("Imagens").getPublicUrl(up.path);
+    const novaUrl = pub.publicUrl;
+
+    const { error: updErr } = await supabase.from("camisetas").update({ imagem_url: novaUrl }).eq("id", id);
+    if (updErr) throw new Error("Erro ao atualizar registro.");
+
+    document.getElementById(`img_${id}`).src = novaUrl;
+
+    const usuario = await getUsuarioAtual();
+    await registrarLog(usuario, "Alteração de imagem", `Camiseta ID ${id} - nova imagem enviada`);
+
+    loadingMsg.innerText = "✅ Imagem atualizada com sucesso!";
+    loadingMsg.style.color = "#00ff88";
+  } catch (err) {
+    loadingMsg.innerText = "❌ Erro ao atualizar imagem.";
+    loadingMsg.style.color = "#ff4d4d";
+    console.error(err);
+  }
+
+  setTimeout(() => loadingMsg.remove(), 3000);
+}
+
     /* ====== FIM LISTAGENS ====== */
   </script>
 </body>
