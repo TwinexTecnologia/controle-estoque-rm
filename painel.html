@@ -494,6 +494,81 @@
       if (tipo === "historico") { document.getElementById("telaHistorico").style.display = "block"; carregarHistorico(); }
     }
 
+    /* ===== Simulador de Lucro ===== */
+function abrirSimulador(){ document.getElementById('simuladorModal').style.display='flex'; }
+function fecharSimulador(){ document.getElementById('simuladorModal').style.display='none'; document.getElementById('sl_status').innerText=''; }
+
+function sl_atualizaCusto(){
+  const c = parseFloat(document.getElementById('sl_precoCamiseta').value) || 0;
+  const e = parseFloat(document.getElementById('sl_precoEstampa').value) || 0;
+  document.getElementById('sl_custoTotal').value = (c + e).toFixed(2);
+}
+
+function sl_r(custo, lucroPerc){ return custo * (1 + lucroPerc/100); } // receita líquida alvo
+function sl_precoBruto(rl, taxaPerc){
+  const r = parseFloat(taxaPerc) || 0;
+  const f = 1 - (r/100);
+  if (f <= 0){ return NaN; }
+  return rl / f;
+}
+function sl_fmtMoeda(v){ return isFinite(v) ? `R$ ${v.toFixed(2)}` : '—'; }
+function sl_fmtPerc(v){ return isFinite(v) ? `${v.toFixed(1)}%` : '—'; }
+
+function sl_inputsBasicos(){
+  const custo = parseFloat(document.getElementById('sl_custoTotal').value) || 0;
+  const lucroDesejado = parseFloat(document.getElementById('sl_lucroDesejado').value) || 0;
+  const taxaPix = parseFloat(document.getElementById('sl_taxaPix').value) || 0;
+  const taxa2x = parseFloat(document.getElementById('sl_taxa2x').value) || 0;
+  const taxa3x = parseFloat(document.getElementById('sl_taxa3x').value) || 0;
+  return { custo, lucroDesejado, taxaPix, taxa2x, taxa3x };
+}
+
+function sl_calcularPrecos(){
+  const st = document.getElementById('sl_status');
+  const { custo, lucroDesejado, taxaPix, taxa2x, taxa3x } = sl_inputsBasicos();
+
+  if (custo <= 0 || lucroDesejado < 0){
+    st.innerText = "Preencha custo e lucro desejado corretamente."; st.className="status error"; return;
+  }
+  const rl = sl_r(custo, lucroDesejado); // receita líquida desejada
+
+  const pPix = sl_precoBruto(rl, taxaPix);
+  const p2x  = sl_precoBruto(rl, taxa2x);
+  const p3x  = sl_precoBruto(rl, taxa3x);
+
+  document.getElementById('sl_precoIdealPix').innerText = sl_fmtMoeda(pPix);
+  document.getElementById('sl_precoIdeal2x').innerText  = sl_fmtMoeda(p2x);
+  document.getElementById('sl_precoIdeal3x').innerText  = sl_fmtMoeda(p3x);
+
+  st.innerText = "Pronto! Preços ideais calculados."; st.className="status success";
+}
+
+function sl_simularLucro(){
+  const st = document.getElementById('sl_status');
+  const preco = parseFloat(document.getElementById('sl_precoDesejado').value);
+  const metodo = document.getElementById('sl_metodo').value;
+  const { custo, taxaPix, taxa2x, taxa3x } = sl_inputsBasicos();
+
+  if (!preco || preco <= 0){ st.innerText="Informe um preço desejado válido."; st.className="status error"; return; }
+  if (custo <= 0){ st.innerText="Informe o custo (camiseta + estampa)."; st.className="status error"; return; }
+
+  let taxa = 0;
+  if (metodo === 'pix') taxa = taxaPix;
+  if (metodo === '2x') taxa = taxa2x;
+  if (metodo === '3x') taxa = taxa3x;
+
+  const liquido = preco * (1 - (taxa/100));
+  const lucroRS = liquido - custo;
+  const lucroPerc = (lucroRS / custo) * 100;
+
+  document.getElementById('sl_lucroRS').innerText = sl_fmtMoeda(lucroRS);
+  document.getElementById('sl_lucroPerc').innerText = sl_fmtPerc(lucroPerc);
+
+  st.innerText = "Simulação concluída."; st.className="status success";
+}
+/* ===== Fim Simulador ===== */
+
+
     async function carregarSelects(containerId) {
       const container = document.getElementById(containerId);
       container.innerHTML = `
